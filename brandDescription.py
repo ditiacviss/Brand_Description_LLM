@@ -15,7 +15,7 @@ def get_llm(API_KEY):
     )
 
 
-@tool
+
 def summarize_url(url: str,llm) -> str:
     """Fetches and summarizes the actual content of a given brand website URL."""
 
@@ -44,7 +44,7 @@ def summarize_url(url: str,llm) -> str:
     return llm.invoke(prompt).content.strip()
 
 
-@tool
+
 def score_similarity(combined_input: str, llm) -> str:
     """
     Scores how closely a brand description matches the website summary.
@@ -72,7 +72,8 @@ def score_similarity(combined_input: str, llm) -> str:
     Reason: <reason>
     """
     return llm.invoke(prompt).content.strip()
-@tool
+
+
 def json_formatter(raw_output: str) -> dict:
     """
     Formats output like:
