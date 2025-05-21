@@ -95,7 +95,8 @@ def json_formatter(raw_output: str) -> dict:
 def run_brand_match_agent(description: str, url: str, api_key: str):
     llm = get_llm(api_key)
     summary = summarize_url(url, llm)
-    combined_output = score_similarity(description, summary, llm)
+    combined = f"{description} ||| {summary}"
+    combined_output = score_similarity(combined, llm)
     return combined_output, summary
 
 
