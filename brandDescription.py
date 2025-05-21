@@ -16,9 +16,8 @@ def get_llm(API_KEY):
 
 
 @tool
-def summarize_url(url: str) -> str:
+def summarize_url(url: str,llm) -> str:
     """Fetches and summarizes the actual content of a given brand website URL."""
-    llm = get_llm(API_KEY)
 
     try:
         response = requests.get(url, timeout=10)
@@ -36,43 +35,42 @@ def summarize_url(url: str) -> str:
         return f"Failed to fetch content from URL: {e}"
 
     prompt = f"""
-You are a website summarization expert.
-Summarize the following website content in 1–2 lines. Keep it concise and clear.
-
-Website content:
-\"\"\"{content}\"\"\"
-"""
+    You are a website summarization expert.
+    Summarize the following website content in 1–2 lines. Keep it concise and clear.
+    
+    Website content:
+    \"\"\"{content}\"\"\"
+    """
     return llm.invoke(prompt).content.strip()
 
 
 @tool
-def score_similarity(combined_input: str) -> str:
+def score_similarity(combined_input: str, llm) -> str:
     """
     Scores how closely a brand description matches the website summary.
     Input should be in the format: <<<description>>> ||| <<<summary>>>
     """
-    llm = get_llm(API_KEY)
     try:
         description, summary = combined_input.split("|||")
     except ValueError:
         return "Invalid input format. Use: <<<description>>> ||| <<<summary>>>"
 
     prompt = f"""
-You are a brand evaluator. Compare the following two pieces of text:
-
-Brand Description:
-\"\"\"{description.strip()}\"\"\"
-
-Website Summary:
-\"\"\"{summary.strip()}\"\"\"
-
-On a scale of 0 to 100, give a matching score that reflects how well the website matches the description.
-Also provide 1-line reasoning.
-
-Format:
-Score: XX
-Reason: <reason>
-"""
+    You are a brand evaluator. Compare the following two pieces of text:
+    
+    Brand Description:
+    \"\"\"{description.strip()}\"\"\"
+    
+    Website Summary:
+    \"\"\"{summary.strip()}\"\"\"
+    
+    On a scale of 0 to 100, give a matching score that reflects how well the website matches the description.
+    Also provide 1-line reasoning.
+    
+    Format:
+    Score: XX
+    Reason: <reason>
+    """
     return llm.invoke(prompt).content.strip()
 @tool
 def json_formatter(raw_output: str) -> dict:
@@ -95,21 +93,27 @@ def json_formatter(raw_output: str) -> dict:
         return {"error": f"Failed to format output: {e}"}
 
 
-def run_brand_match_agent(brand_description: str, brand_url: str):
-    summary = summarize_url.invoke(brand_url)
-    print(summary)
-    combined = f"{brand_description} ||| {summary}"
-    result = score_similarity.invoke(combined)
-    return result
+def run_brand_match_agent(description: str, url: str, api_key: str):
+    llm = get_llm(api_key)
+    summary = summarize_url(url, llm)
+    combined_output = score_similarity(description, summary, llm)
+    return combined_output, summary
 
 
-if __name__ == "__main__":
-    url = st.text_input("ENTER URL")
-    description = st.text_input("ENTER URL DESCRIPTION:")
-    API_KEY = st.text_input('Enter ChatGroq API_KEY KEY:')
-    get_llm(API_KEY)
-    match_result = run_brand_match_agent(description, url)
-    st.write("\n--- Match Evaluation ---")
-    st.write(match_result)
-    formatted = json_formatter.invoke(match_result)
-    st.write(formatted)
+st.title("Brand Description vs Website Match")
+
+url = st.text_input("Enter Brand Website URL")
+description = st.text_area("Enter Brand Description")
+API_KEY = st.text_input("Enter GROQ API Key", type="password")
+
+if st.button("Enter") and url and description and API_KEY:
+    output, summary = run_brand_match_agent(description, url, API_KEY)
+    st.markdown("🔍 Website Summary")
+    st.write(summary)
+
+    st.markdown("📊 Match Result")
+    st.code(output)
+
+    formatted = json_formatter(output)
+    st.markdown("✅ Formatted Result")
+    st.json(formatted)
